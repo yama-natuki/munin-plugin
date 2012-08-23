@@ -1,0 +1,48 @@
+#! /usr/bin/perl -w
+#
+# last updated : 2012/08/23 12:48:42 JST
+#
+# munin-plugin to monitor information from temperature.
+#
+#
+# [install]
+#    copy temper_temp to /etc/munin/plugins/
+#
+# [use]
+#    append to /etc/munin/plugin-conf.d/munin-node
+#
+#    [temper_*]
+#    group temper
+#
+# [test]
+#    sudo munin-run temper_temp
+#
+
+use strict;
+use warnings;
+use Math::Round;
+
+$ENV{'LANG'} = "C"; # Force parseable output from sensors.
+$ENV{'LC_ALL'} = "C"; # Force parseable output from sensors.
+my $SENSORS = $ENV{'/usr/local/bin/temper'} || 'temper';
+
+
+if (defined $ARGV[0] and $ARGV[0] eq "config")
+{
+	print "graph_title USB TEMPer Temperatures\n";
+	print "graph_args --base 1000 --lower-limit 0\n";
+	print "graph_vtitle Celcius\n";
+	print "graph_category sensors\n";
+	print "graph_info This graph shows USB TEMPer temperatures.\n";
+	print "temp.label TEMPer\n";
+	exit 0;
+}
+
+my $text = `DISPLAY=:0 $SENSORS`;
+chomp $text;
+my @ondo = split(/,/, $text);
+my $temp = nearest(0.01, $ondo[1]);
+if (@ondo) {
+  	print "temp.value $temp\n";
+}
+

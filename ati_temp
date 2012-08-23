@@ -1,0 +1,35 @@
+#! /usr/bin/perl -w
+#
+# last updated : 2012/08/23 12:48:08 JST
+#
+
+use strict;
+use warnings;
+
+
+$ENV{'LANG'} = "C"; # Force parseable output from sensors.
+$ENV{'LC_ALL'} = "C"; # Force parseable output from sensors.
+my $SENSORS = $ENV{'/usr/lib/fglrx/bin/aticonfig'} || 'aticonfig';
+
+
+if (defined $ARGV[0] and $ARGV[0] eq "config")
+{
+	print "graph_title ATI VGA CARD Temperatures\n";
+	print "graph_args --base 1000 --lower-limit 0\n";
+	print "graph_vtitle Celcius\n";
+	print "graph_category sensors\n";
+	print "graph_info This graph shows temperatures in the ATI HD4650.\n";
+#	print "temp.infoTemperature readout from HD4650 \n";
+#	print "temp.draw LINE2\n";
+	print "temp.label GPU\n";
+	exit 0;
+}
+
+#my $text = `/usr/bin/aticonfig --odgt --adapter=0`;
+my $text = `DISPLAY=:0 $SENSORS --odgt --adapter=0`;
+if ($text =~ /Sensor 0\: Temperature \- ([0-9]+\.[0-9][0-9])/g) {
+#    print "$1\n";
+	my $num = sprintf("%.1f", $1);
+	print "temp.value $num\n";
+}
+#print $text;
