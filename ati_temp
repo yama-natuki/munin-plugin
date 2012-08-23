@@ -1,6 +1,8 @@
 #! /usr/bin/perl -w
 #
-# last updated : 2012/08/23 12:48:08 JST
+# last updated : 2012/08/23 18:12:21 JST
+#
+# This script collects GPU temperatures for use as a munin plugin.
 #
 
 use strict;
