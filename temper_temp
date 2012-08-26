@@ -1,7 +1,5 @@
 #! /usr/bin/perl -w
 #
-# last updated : 2012/08/26 18:54:08 JST
-#
 # munin-plugin to monitor information from temperature.
 #
 #
