@@ -1,31 +1,46 @@
 #!/usr/bin/perl
 # -*- perl -*-
 #
-# Sensors Temp Munin Plugin.
+# sensors temp munin plugin.
 #
-# ex.
-#   ~$ sensors
-# South temp1:  +38.0°C  (high = +255.0°C, hyst = +251.0°C)  ALARM (CRIT)
-#                        (crit = +255.0°C, hyst = +251.0°C)  sensor = transistor
-# temp2:          FAULT  (high = +255.0°C, hyst = +251.0°C)
-#                        (crit = +255.0°C, hyst = +251.0°C)  sensor = transistor
-# North temp3:  +40.0°C  (high = +255.0°C, hyst = +253.0°C)  ALARM (CRIT)
-#                        (crit = +255.0°C, hyst = +253.0°C)  sensor = transistor
 
-# radeon-pci-0100
-# Adapter: PCI adapter
-# temp1:        +52.0°C  
+=head1 NAME
 
-# k10temp-pci-00c3
-# Adapter: PCI adapter
-# CPU:          +45.5°C  (high = +90.0°C)
-#
-# 以下の順番に並び順を固定して出力する。
-# 1.CPU
-# 2.South temp1
-# 3.North temp3
-# 4.ATI
-#
+sensors_ - Wildcard-plugin to monitor information from temperature, voltage,
+	   and fan speed sensors.
+
+=head1 CONFIGURATION
+
+The plugins needs the following components configured: 
+
+	- i2c and lm_sensors modules installed and loaded.
+	- sensors program installed and in path.
+ Note:
+ 	- Sensor names are read from the output of the sensors program.
+ 	  Change them in /etc/sensors.conf if you don't like them.
+
+  [sensors_*]
+      env.sensors 	    - Override default sensors program path
+      env.ignore_temp<n>    - Temperature <n> will not be plotted
+
+=head1 VERSION
+
+$Id: sensors_temp,v 1.2 2011/07/16 11:45:55 yama Exp yama $
+
+=head1 AUTHOR
+
+Unknown author
+
+=head1 LICENSE
+
+Unknown license
+
+=head1 MAGIC MARKERS
+
+ #%# family=manual
+ #%# capabilities=autoconf suggest
+
+=cut
 
 use strict;
 use warnings;
@@ -67,7 +82,7 @@ my %config = (
 
             (?:\.\d+)?)# Zero or one match of '.' char followd by one or more
                        # digits. '?:' means it doesn't spit out the field.
-            [ｰ\s]      # Match degree char or space char
+            [-\s]      # Match degree char or space char
             C          # Match 'C' char
 
             (?:        # >>>>Match the following statement zero or one time. 
@@ -84,7 +99,7 @@ my %config = (
             
             (?:\.\d+)?)# Zero or one match of '.' char followd by one or more
                        # digits. '?:' means it doesn't spit out the field.
-            [ｰ\s]      # Match degree char or space char
+            [-\s]      # Match degree char or space char
             C,\s*      # 'C,' string followd by zero or more spaces
             hyst       # 'hyst' string followed by
             (?:eresis)?# zero or one 'eresis' string. 
@@ -96,7 +111,7 @@ my %config = (
                        # (Match hyst value as \$4) followed by  
             (?:\.\d+)?)# Zero or one match of '.' char followd by one or more
                        # digits. '?:' means it doesn't spit out the field.
-            [ｰ\s]C     # Match degree char or space char, and then 'C' char
+            [-\s]C     # Match degree char or space char, and then 'C' char
             \)         # ')' char
             )?         # >>>>end of statement
         /xms,
@@ -152,20 +167,9 @@ if ( defined $ARGV[0] and $ARGV[0] eq 'config' ) {
   while ($text =~ /$config{$func}->{regex}/g) {
     my ($label, undef, $max, $min) = ($1, $2, $3, $4);
 	# CPU を常に1番に。
-	# 次 South Chip
-	# 次 North Chip
-	# 次 GPU
-#	print $label,"\n";
 	if ($label eq 'CPU') {
 	    $sensor = 1;
-	  } elsif ($label eq 'South temp1') {
-	    $sensor = 2;
-	  } elsif ($label eq 'North temp3') {
-	    $sensor = 3;
-	  } else {
-	    $sensor = 4;
-		$label = "ATI";
-	  }
+	}
 	# 表示順でグラフの色が決まるので結局出力順が大事に.
 	# ハッシュに番号をキーにして格納。
 	$label_list{$sensor} = "$func$sensor.label $label\n";
@@ -185,25 +189,12 @@ my $text = `$SENSORS`;
 my $sensor = 2;
 my %v_list;
 while ($text =~ /$config{$func}->{regex}/g) {
-		if ($1 eq 'CPU') {
+	if ($1 eq 'CPU') {
 	    $sensor = 1;
-	  } elsif ($1 eq 'South temp1') {
-	    $sensor = 2;
-	  } elsif ($1 eq 'North temp3') {
-	    $sensor = 3;
-	  } else {
-	    $sensor = 4;
-	  }
+	}
   $v_list{$1} =  "$func$sensor.value $2\n";
   $sensor++;
 }
-# ati radeo temp 値の調整。sensors3.confでの方法がわからん。
-my @ati = split(/ /, $v_list{"temp1"});
-my $ati_temp = $ati[1];
-chomp $ati_temp;
-$ati[1] = $ati_temp - 9; #fuzzy.
-$v_list{"temp1"} = $ati[0]. " ". $ati[1]. "\n";
-
 # ハッシュキーでソートして出力。
 foreach my $zz ( sort keys %v_list ) {
 	print "$v_list{$zz}";
@@ -221,43 +212,5 @@ sub temp_threshold {
   printf "$name.warning $min\n" if $min;
   printf "$name.critical $max\n" if $max;
 }
-
-=head1 NAME
-
-sensors_ - Wildcard-plugin to monitor information from temperature, voltage,
-	   and fan speed sensors.
-
-=head1 CONFIGURATION
-
-The plugins needs the following components configured: 
-
-	- i2c and lm_sensors modules installed and loaded.
-	- sensors program installed and in path.
- Note:
- 	- Sensor names are read from the output of the sensors program.
- 	  Change them in /etc/sensors.conf if you don't like them.
-
-  [sensors_*]
-      env.sensors 	    - Override default sensors program path
-      env.ignore_temp<n>    - Temperature <n> will not be plotted
-
-=head1 VERSION
-
-$Id: sensors_temp,v 1.2 2011/07/16 11:45:55 yama Exp yama $
-
-=head1 AUTHOR
-
-Unknown author
-
-=head1 LICENSE
-
-Unknown license
-
-=head1 MAGIC MARKERS
-
- #%# family=manual
- #%# capabilities=autoconf suggest
-
-=cut
 
 # vim:syntax=perl
